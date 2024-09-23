@@ -46,8 +46,9 @@ class QuotesMonitor():
             session = 'REGULAR'
         if contractType is None:
             contractType = 'I'
-        if product is None:
-            product='TXF'
+        # if product is None:
+        #     product='TXF' -> 大台
+        #     product='TXF' -> 大台
         '''
         類型，可選 FUTURE 期貨 ； OPTION 選擇權
         交易時段，可選 REGULAR 一般交易 或 AFTERHOURS 盤後交易
@@ -57,7 +58,7 @@ class QuotesMonitor():
         '''
         tickers = self.futopt.intraday.tickers(
                 type='FUTURE', exchange='TAIFEX',
-                session='AFTERHOURS', contractType='I', product='TXF')
+                session='AFTERHOURS', contractType='I', product=product)
         return tickers
 
     def get_mtx_quote(self, symbol=None):
