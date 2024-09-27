@@ -1,4 +1,6 @@
 import json
+import datetime as dt
+from datetime import timedelta
 from configparser import ConfigParser
 from fugle_marketdata import WebSocketClient, RestClient
 
@@ -38,7 +40,7 @@ class QuotesMonitor():
         '''
         products = self.futopt.intraday.products(
                 type='FUTURE', exchange='TAIFEX',
-                session='AFTERHOURS', contractType='I')
+                session=session, contractType=contractType)
         return products
 
     def get_ticker(self, session=None, contractType=None, product=None):
@@ -46,9 +48,9 @@ class QuotesMonitor():
             session = 'REGULAR'
         if contractType is None:
             contractType = 'I'
-        # if product is None:
-        #     product='TXF' -> 大台
-        #     product='TXF' -> 大台
+        if product is None:
+            product = 'MXF'
+            # product='TXF'
         '''
         類型，可選 FUTURE 期貨 ； OPTION 選擇權
         交易時段，可選 REGULAR 一般交易 或 AFTERHOURS 盤後交易
@@ -58,11 +60,40 @@ class QuotesMonitor():
         '''
         tickers = self.futopt.intraday.tickers(
                 type='FUTURE', exchange='TAIFEX',
-                session='AFTERHOURS', contractType='I', product=product)
+                session=session, contractType=contractType, product=product)
         return tickers
 
-    def get_mtx_quote(self, symbol=None):
-        if symbol is None:
-            symbol = 'MTX'
-        mtx_quote = self.futopt.intraday.quote(symbol='TXF')
-        return mtx_quote
+    def third_wednesday(self, year, month):
+        day = 21-(dt.date(year, month, 1).weekday()+4)%7
+        return dt.date(year, month, day)
+
+    def get_next_expiration(self):
+        now = dt.datetime.now()  # 現在時間；從月期指角度來說，可能是換約前、到期日早盤、到期日夜盤、換約至下個月
+        #now = dt.datetime(2024, 9, 18, 10, 21, 22)
+        next_30_days = now + timedelta(days=30)
+        # 輸入今天日期，去看看是不是第三個星期三？
+        if now.date() > self.third_wednesday(year=now.year, month=now.month): # 換約至下個月
+            mtx_expiration = self.third_wednesday(year=next_30_days.year, month=next_30_days.month)
+        elif now.date() <  self.third_wednesday(year=now.year, month=now.month): # 尚未換月
+            mtx_expiration = self.third_wednesday(year=now.year, month=now.month)
+        else:   # 換約日
+            if now.hour > 14:
+                mtx_expiration = self.third_wednesday(year=next_30_days.year, month=next_30_days.month)
+            else:
+                mtx_expiration = self.third_wednesday(year=now.year, month=now.month)
+        return mtx_expiration
+
+    def get_mtx_symbol(self):
+        now = dt.datetime.now()
+        end_date = self.get_next_expiration().strftime("%Y-%m-%d")
+        tks = None
+        if now.hour > 14 or now.hour < 6:
+            tks = self.get_ticker(session='REGULAR', contractType='I', product='MXF')
+        else:
+            tks = self.get_ticker(session='AFTERHOURS', contractType='I', product='MXF')
+        if 'data' not in tks.keys():
+            print('no data')
+            return None
+        for tk in tks['data']:
+            if tk['endDate'] == end_date:
+                return tk['symbol']
