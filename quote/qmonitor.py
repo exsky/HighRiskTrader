@@ -1,8 +1,9 @@
+import re
 import json
 import datetime as dt
 from datetime import timedelta
 from configparser import ConfigParser
-from fugle_marketdata import WebSocketClient, RestClient
+from fugle_marketdata import RestClient
 
 class QuotesMonitor():
 

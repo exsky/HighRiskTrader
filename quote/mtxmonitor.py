@@ -2,7 +2,7 @@ import json
 import redis
 import datetime as dt
 from configparser import ConfigParser
-from fugle_marketdata import WebSocketClient, RestClient
+from fugle_marketdata import WebSocketClient
 
 from quote.qmonitor import QuotesMonitor
 
